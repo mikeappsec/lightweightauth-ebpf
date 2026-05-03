@@ -19,9 +19,15 @@
 
 #define MAX_SOCKETS 65536
 
+// Fail mode constants (written by userspace to config_map).
+#define FAIL_MODE_CLOSED 0
+#define FAIL_MODE_OPEN   1
+
 struct sock_key {
     __u32 saddr;
     __u32 daddr;
+    __u32 saddr6[4];
+    __u32 daddr6[4];
     __u16 sport;
     __u16 dport;
     __u8  family;
@@ -44,6 +50,14 @@ struct {
     __type(key, struct sock_key);
     __type(value, __u8);
 } verdict_map SEC(".maps");
+
+// Config map: index 0 = fail_mode (0=closed, 1=open).
+struct {
+    __uint(type, BPF_MAP_TYPE_ARRAY);
+    __uint(max_entries, 1);
+    __type(key, __u32);
+    __type(value, __u8);
+} config_map SEC(".maps");
 
 // Stats (shared definition).
 struct {
@@ -73,6 +87,15 @@ int lwauth_sk_msg(struct sk_msg_md *msg) {
     if (msg->family == 2) { // AF_INET
         key.saddr = msg->local_ip4;
         key.daddr = msg->remote_ip4;
+    } else if (msg->family == 10) { // AF_INET6
+        key.saddr6[0] = msg->local_ip6[0];
+        key.saddr6[1] = msg->local_ip6[1];
+        key.saddr6[2] = msg->local_ip6[2];
+        key.saddr6[3] = msg->local_ip6[3];
+        key.daddr6[0] = msg->remote_ip6[0];
+        key.daddr6[1] = msg->remote_ip6[1];
+        key.daddr6[2] = msg->remote_ip6[2];
+        key.daddr6[3] = msg->remote_ip6[3];
     }
     key.sport = msg->local_port;
     key.dport = bpf_ntohl(msg->remote_port) >> 16;
@@ -89,12 +112,18 @@ int lwauth_sk_msg(struct sk_msg_md *msg) {
         }
     }
 
-    // No verdict yet — redirect to lwauth userspace agent socket
-    // for policy evaluation. The agent will write the verdict back.
-    // Default: pass through (fail-open for the initial implementation;
-    // production deployments should configure fail-closed).
-    bump_stat(STAT_ALLOWED);
-    return SK_PASS;
+    // No verdict yet — check config_map for fail mode.
+    // Default is fail-closed (SK_DROP) unless userspace explicitly
+    // configures fail-open.
+    __u32 cfg_key = 0;
+    __u8 *fail_mode = bpf_map_lookup_elem(&config_map, &cfg_key);
+    if (fail_mode && *fail_mode == FAIL_MODE_OPEN) {
+        bump_stat(STAT_ALLOWED);
+        return SK_PASS;
+    }
+
+    bump_stat(STAT_DENIED);
+    return SK_DROP;
 }
 
 char _license[] SEC("license") = "Apache-2.0";

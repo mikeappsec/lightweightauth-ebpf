@@ -114,3 +114,42 @@ func TestLoadConfig_MissingFile(t *testing.T) {
 		t.Fatal("expected error for missing file")
 	}
 }
+
+func TestLoadConfig_InvalidCIDR(t *testing.T) {
+	dir := t.TempDir()
+	cfgFile := filepath.Join(dir, "config.yaml")
+	data := `
+denyCidrs:
+  - "not-a-cidr"
+`
+	if err := os.WriteFile(cfgFile, []byte(data), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := LoadConfig(cfgFile)
+	if err == nil {
+		t.Fatal("expected error for invalid CIDR")
+	}
+}
+
+func TestLoadConfig_ValidCIDRs(t *testing.T) {
+	dir := t.TempDir()
+	cfgFile := filepath.Join(dir, "config.yaml")
+	data := `
+denyCidrs:
+  - "10.0.0.0/8"
+  - "192.168.0.0/16"
+  - "fd00::/64"
+`
+	if err := os.WriteFile(cfgFile, []byte(data), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := LoadConfig(cfgFile)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(cfg.DenyCIDRs) != 3 {
+		t.Errorf("DenyCIDRs len = %d, want 3", len(cfg.DenyCIDRs))
+	}
+}

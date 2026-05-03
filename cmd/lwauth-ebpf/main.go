@@ -34,7 +34,7 @@ import (
 
 func main() {
 	configPath := flag.String("config", "/etc/lwauth-ebpf/config.yaml", "path to config file")
-	metricsAddr := flag.String("metrics-addr", ":9191", "Prometheus metrics listen address")
+	metricsAddr := flag.String("metrics-addr", "127.0.0.1:9191", "Prometheus metrics listen address")
 	flag.Parse()
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))

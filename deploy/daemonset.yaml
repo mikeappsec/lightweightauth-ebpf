@@ -25,7 +25,7 @@ spec:
         prometheus.io/port: "9191"
         prometheus.io/path: "/metrics"
     spec:
-      hostPID: true
+      hostPID: false
       hostNetwork: true
       serviceAccountName: lwauth-ebpf
       tolerations:
@@ -36,10 +36,14 @@ spec:
           image: ghcr.io/mikeappsec/lwauth-ebpf:latest
           args:
             - --config=/etc/lwauth-ebpf/config.yaml
-            - --metrics-addr=:9191
+            - --metrics-addr=127.0.0.1:9191
           securityContext:
-            privileged: true
+            privileged: false
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
             capabilities:
+              drop:
+                - ALL
               add:
                 - BPF
                 - SYS_ADMIN
@@ -113,7 +117,7 @@ data:
     bpfDir: /opt/lwauth-ebpf/bpf
     cgroupPath: /sys/fs/cgroup
     lwauthSocket: /run/lwauth/lwauth.sock
-    failMode: open
+    failMode: closed
     interceptPorts:
       - lo: 80
         hi: 80

@@ -27,10 +27,12 @@ struct port_range {
     __u16 hi;
 };
 
-// Key for the sockhash map — 4-tuple.
+// Key for the sockhash map — 4-tuple (supports both IPv4 and IPv6).
 struct sock_key {
     __u32 saddr;
     __u32 daddr;
+    __u32 saddr6[4];
+    __u32 daddr6[4];
     __u16 sport;
     __u16 dport;
     __u8  family; // AF_INET=2, AF_INET6=10
@@ -91,6 +93,15 @@ static __always_inline void extract_key(struct bpf_sock_ops *skops, struct sock_
     if (skops->family == 2) { // AF_INET
         key->saddr = skops->local_ip4;
         key->daddr = skops->remote_ip4;
+    } else if (skops->family == 10) { // AF_INET6
+        key->saddr6[0] = skops->local_ip6[0];
+        key->saddr6[1] = skops->local_ip6[1];
+        key->saddr6[2] = skops->local_ip6[2];
+        key->saddr6[3] = skops->local_ip6[3];
+        key->daddr6[0] = skops->remote_ip6[0];
+        key->daddr6[1] = skops->remote_ip6[1];
+        key->daddr6[2] = skops->remote_ip6[2];
+        key->daddr6[3] = skops->remote_ip6[3];
     }
     key->sport = skops->local_port;
     key->dport = bpf_ntohl(skops->remote_port) >> 16;

@@ -5,6 +5,7 @@ package main
 
 import (
 	"fmt"
+	"net"
 	"os"
 
 	"gopkg.in/yaml.v3"
@@ -76,6 +77,11 @@ func (c *Config) validate() error {
 		}
 		if pr.Lo > pr.Hi {
 			return fmt.Errorf("config: interceptPorts[%d]: lo (%d) > hi (%d)", i, pr.Lo, pr.Hi)
+		}
+	}
+	for i, cidr := range c.DenyCIDRs {
+		if _, _, err := net.ParseCIDR(cidr); err != nil {
+			return fmt.Errorf("config: denyCidrs[%d]: %w", i, err)
 		}
 	}
 	return nil

@@ -1,0 +1,14 @@
+# Binaries
+bin/
+*.o
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Pentest reports (never commit)
+/pentest-report*.md

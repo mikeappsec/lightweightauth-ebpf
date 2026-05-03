@@ -22,6 +22,8 @@ struct bpf_sock_ops {
     __u32 family;
     __u32 local_ip4;
     __u32 remote_ip4;
+    __u32 local_ip6[4];
+    __u32 remote_ip6[4];
     __u32 local_port;
     __u32 remote_port;
 };
@@ -31,6 +33,8 @@ struct sk_msg_md {
     __u32 family;
     __u32 local_ip4;
     __u32 remote_ip4;
+    __u32 local_ip6[4];
+    __u32 remote_ip6[4];
     __u32 local_port;
     __u32 remote_port;
     __u32 size;
@@ -54,5 +58,6 @@ struct __sk_buff {
 
 /* Map flags. */
 #define BPF_ANY 0
+#define BPF_F_NO_PREALLOC 1
 
 #endif /* __VMLINUX_H__ */
